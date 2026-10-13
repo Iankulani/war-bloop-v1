@@ -1,0 +1,122 @@
+# WAR-BLOOP-V1 Sandbox Environment Configuration
+# For isolated testing in GitLab CI
+
+stages:
+  - sandbox:setup
+  - sandbox:test
+  - sandbox:cleanup
+
+variables:
+  SANDBOX_NETWORK: "war-bloop-sandbox"
+  SANDBOX_TARGET: "target-container"
+
+# ============================================================================
+# SANDBOX SETUP
+# ============================================================================
+sandbox:create-network:
+  stage: sandbox:setup
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - echo "Creating isolated sandbox network..."
+    - docker network create $SANDBOX_NETWORK || true
+    - docker network ls
+  only:
+    - branches
+
+sandbox:deploy-target:
+  stage: sandbox:setup
+  image: docker:24
+  services:
+    - docker:24-dind
+  needs: ["sandbox:create-network"]
+  script:
+    - echo "Deploying vulnerable target for testing..."
+    - |
+      docker run -d \
+        --name $SANDBOX_TARGET \
+        --network $SANDBOX_NETWORK \
+        --hostname target \
+        vulnerables/web-dvwa:latest
+    - sleep 10
+    - docker ps
+  only:
+    - branches
+
+# ============================================================================
+# SANDBOX TESTING
+# ============================================================================
+sandbox:test-connectivity:
+  stage: sandbox:test
+  image: python:3.11-slim
+  services:
+    - docker:24-dind
+  needs: ["sandbox:deploy-target"]
+  before_script:
+    - apt-get update && apt-get install -y nmap curl netcat-openbsd
+  script:
+    - echo "Testing connectivity to sandbox target..."
+    - docker exec $SANDBOX_TARGET hostname -I
+    - nmap -sn $SANDBOX_TARGET
+    - curl -s http://$SANDBOX_TARGET:80 || true
+  allow_failure: true
+  only:
+    - branches
+
+sandbox:test-scanning:
+  stage: sandbox:test
+  image: python:3.11-slim
+  services:
+    - docker:24-dind
+  needs: ["sandbox:deploy-target"]
+  before_script:
+    - apt-get update && apt-get install -y nmap
+  script:
+    - echo "Testing network scanning in sandbox..."
+    - nmap -sV -F $SANDBOX_TARGET || true
+    - nmap -sS -F $SANDBOX_TARGET || true
+  allow_failure: true
+  only:
+    - branches
+
+sandbox:test-web:
+  stage: sandbox:test
+  image: python:3.11-slim
+  services:
+    - docker:24-dind
+  needs: ["sandbox:deploy-target"]
+  before_script:
+    - pip install requests
+  script:
+    - echo "Testing web application scanning..."
+    - python3 -c "
+      import requests
+      try:
+          r = requests.get('http://$SANDBOX_TARGET:80', timeout=10)
+          print(f'Status: {r.status_code}')
+          print(f'Headers: {dict(r.headers)}')
+      except Exception as e:
+          print(f'Error: {e}')
+      "
+  allow_failure: true
+  only:
+    - branches
+
+# ============================================================================
+# SANDBOX CLEANUP
+# ============================================================================
+sandbox:cleanup:
+  stage: sandbox:cleanup
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - echo "Cleaning up sandbox..."
+    - docker stop $SANDBOX_TARGET || true
+    - docker rm $SANDBOX_TARGET || true
+    - docker network rm $SANDBOX_NETWORK || true
+    - echo "Sandbox cleaned up"
+  when: always
+  only:
+    - branches

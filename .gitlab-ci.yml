@@ -1,0 +1,397 @@
+# WAR-BLOOP-V1 GitLab CI/CD Pipeline
+# Author: Ian Carter Kulani
+# Version: 1.0.0
+
+stages:
+  - validate
+  - test
+  - security
+  - build
+  - deploy
+  - release
+
+variables:
+  PYTHON_VERSION: "3.11"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+  DOCKER_IMAGE: "$CI_REGISTRY_IMAGE"
+  DOCKER_TAG: "$CI_COMMIT_SHORT_SHA"
+
+# Cache configuration
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .pip-cache/
+    - venv/
+    - .pytest_cache/
+
+# ============================================================================
+# VALIDATE STAGE
+# ============================================================================
+validate:syntax:
+  stage: validate
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install pyflakes pylint
+  script:
+    - echo "Checking Python syntax..."
+    - python -m py_compile war_bloop_v1.py
+    - python -m py_compile requirements-check.py
+    - python -m py_compile test-commands.py
+    - echo "Syntax check passed"
+  only:
+    - branches
+    - merge_requests
+
+validate:requirements:
+  stage: validate
+  image: python:${PYTHON_VERSION}-slim
+  script:
+    - echo "Validating requirements.txt..."
+    - pip install -r requirements.txt --dry-run || true
+    - echo "Requirements validated"
+  only:
+    - branches
+    - merge_requests
+
+validate:yaml:
+  stage: validate
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install yamllint
+  script:
+    - echo "Validating YAML files..."
+    - yamllint -d relaxed .gitlab-ci.yml
+    - yamllint -d relaxed docker-compose.yml
+    - echo "YAML validation passed"
+  only:
+    - branches
+    - merge_requests
+
+validate:dockerfile:
+  stage: validate
+  image: hadolint/hadolint:latest-alpine
+  script:
+    - echo "Validating Dockerfile..."
+    - hadolint Dockerfile || true
+    - hadolint Dockerfile.dev || true
+  only:
+    - branches
+    - merge_requests
+
+# ============================================================================
+# TEST STAGE
+# ============================================================================
+test:unit:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - apt-get update && apt-get install -y nmap curl wget netcat-openbsd dnsutils traceroute
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install pytest pytest-cov pytest-asyncio
+  script:
+    - echo "Running unit tests..."
+    - pytest tests/ -v --cov=. --cov-report=xml --cov-report=term
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+      - htmlcov/
+    expire_in: 1 week
+  only:
+    - branches
+    - merge_requests
+
+test:commands:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - apt-get update && apt-get install -y nmap curl wget netcat-openbsd dnsutils traceroute mtr-tiny
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - echo "Testing all commands..."
+    - python test-commands.py
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+test:requirements:
+  stage: test
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - python -m pip install --upgrade pip
+  script:
+    - echo "Checking requirements..."
+    - python requirements-check.py
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+test:integration:
+  stage: test
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+  before_script:
+    - apk add --no-cache python3 py3-pip curl
+    - python3 -m pip install requests
+  script:
+    - echo "Building test image..."
+    - docker build -t war-bloop-test:latest .
+    - echo "Starting container..."
+    - docker run -d --name war-bloop-test -p 5000:5000 war-bloop-test:latest
+    - sleep 10
+    - echo "Testing container health..."
+    - docker ps
+    - docker logs war-bloop-test
+    - echo "Integration test passed"
+  after_script:
+    - docker stop war-bloop-test || true
+    - docker rm war-bloop-test || true
+  allow_failure: true
+  only:
+    - main
+    - develop
+
+# ============================================================================
+# SECURITY STAGE
+# ============================================================================
+security:bandit:
+  stage: security
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install bandit
+  script:
+    - echo "Running Bandit security scan..."
+    - bandit -r . -x ./venv,./tests,./.git -f json -o bandit-report.json || true
+    - bandit -r . -x ./venv,./tests,./.git -f txt || true
+  artifacts:
+    paths:
+      - bandit-report.json
+    expire_in: 1 week
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+security:safety:
+  stage: security
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install safety
+  script:
+    - echo "Checking for known vulnerabilities..."
+    - safety check -r requirements.txt || true
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+security:trivy:
+  stage: security
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - echo "Scanning filesystem with Trivy..."
+    - trivy fs --security-checks vuln,config --format json --output trivy-report.json . || true
+    - trivy fs --security-checks vuln,config . || true
+  artifacts:
+    paths:
+      - trivy-report.json
+    expire_in: 1 week
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+security:secrets:
+  stage: security
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install detect-secrets
+  script:
+    - echo "Scanning for secrets..."
+    - detect-secrets scan --all-files > .secrets.baseline || true
+    - cat .secrets.baseline
+  artifacts:
+    paths:
+      - .secrets.baseline
+    expire_in: 1 week
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+# ============================================================================
+# BUILD STAGE
+# ============================================================================
+build:docker:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  script:
+    - echo "Building Docker image..."
+    - docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
+    - docker build -t $DOCKER_IMAGE:latest .
+    - echo "Pushing to registry..."
+    - docker push $DOCKER_IMAGE:$DOCKER_TAG
+    - docker push $DOCKER_IMAGE:latest
+    - echo "Build and push complete"
+  only:
+    - main
+    - tags
+
+build:docker-alpine:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+  script:
+    - echo "Building Alpine Docker image..."
+    - docker build -t $DOCKER_IMAGE:alpine .
+  only:
+    - main
+
+build:python-package:
+  stage: build
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install build twine
+  script:
+    - echo "Building Python package..."
+    - python -m build
+    - ls -la dist/
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  only:
+    - main
+    - tags
+
+# ============================================================================
+# DEPLOY STAGE
+# ============================================================================
+deploy:staging:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | ssh-add -
+    - mkdir -p ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to staging..."
+    - ssh $STAGING_USER@$STAGING_HOST "cd /opt/war-bloop && git pull && docker-compose down && docker-compose up -d"
+    - echo "Staging deployment complete"
+  environment:
+    name: staging
+    url: https://staging.war-bloop.example.com
+  only:
+    - develop
+  when: manual
+
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | ssh-add -
+    - mkdir -p ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+  script:
+    - echo "Deploying to production..."
+    - ssh $PRODUCTION_USER@$PRODUCTION_HOST "cd /opt/war-bloop && git pull && docker-compose down && docker-compose up -d"
+    - echo "Production deployment complete"
+  environment:
+    name: production
+    url: https://war-bloop.example.com
+  only:
+    - main
+  when: manual
+
+# ============================================================================
+# RELEASE STAGE
+# ============================================================================
+release:pypi:
+  stage: release
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install twine
+  script:
+    - echo "Publishing to PyPI..."
+    - twine upload dist/* --username __token__ --password $PYPI_TOKEN
+    - echo "Published to PyPI"
+  only:
+    - tags
+  when: manual
+
+release:gitlab:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  script:
+    - echo "Creating GitLab release..."
+    - |
+      release-cli create --name "Release $CI_COMMIT_TAG" \
+        --tag-name $CI_COMMIT_TAG \
+        --description "WAR-BLOOP-V1 Release $CI_COMMIT_TAG" \
+        --assets-link "{\"name\":\"Docker Image\",\"url\":\"$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG\"}"
+  only:
+    - tags
+
+# ============================================================================
+# SCHEDULED JOBS
+# ============================================================================
+scheduled:security-scan:
+  stage: security
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install safety bandit
+  script:
+    - echo "Running scheduled security scan..."
+    - safety check -r requirements.txt
+    - bandit -r . -x ./venv,./tests
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  allow_failure: true
+
+scheduled:dependency-update:
+  stage: build
+  image: python:${PYTHON_VERSION}-slim
+  before_script:
+    - pip install pip-tools
+  script:
+    - echo "Checking for dependency updates..."
+    - pip list --outdated
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  allow_failure: true

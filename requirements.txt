@@ -1,0 +1,42 @@
+# Core Dependencies
+colorama>=0.4.6
+requests>=2.31.0
+psutil>=5.9.0
+cryptography>=41.0.0
+paramiko>=3.3.0
+scapy>=2.5.0
+dnspython>=2.4.0
+python-whois>=0.8.0
+
+# Web Framework
+flask>=2.3.0
+flask-socketio>=5.3.0
+flask-cors>=4.0.0
+
+# Bot Platforms
+discord.py>=2.3.0
+telethon>=1.31.0
+slack-sdk>=3.23.0
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+
+# Keylogger
+pynput>=1.7.6
+pyperclip>=1.8.2
+pyautogui>=0.9.54
+
+# PDF Generation
+reportlab>=4.0.0
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# Google APIs
+google-auth>=2.23.0
+google-api-python-client>=2.100.0
+
+# Utilities
+python-dateutil>=2.8.2
+tabulate>=0.9.0
+tqdm>=4.66.0
+pyyaml>=6.0
+jinja2>=3.1.0

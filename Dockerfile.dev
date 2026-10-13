@@ -1,0 +1,61 @@
+# WAR-BLOOP-V1 - Development Docker Image
+# Includes additional development tools
+
+FROM python:3.11-slim-bookworm
+
+LABEL maintainer="Ian Carter Kulani"
+LABEL description="WAR-BLOOP-V1 - Development Environment"
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    libpcap-dev \
+    nmap \
+    curl \
+    wget \
+    netcat-openbsd \
+    dnsutils \
+    traceroute \
+    mtr-tiny \
+    openssh-client \
+    whois \
+    git \
+    vim \
+    htop \
+    tcpdump \
+    tshark \
+    chromium \
+    chromium-driver \
+    libfreetype6-dev \
+    libpng-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements
+COPY requirements.txt requirements-dev.txt ./
+
+# Install Python dependencies
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt && \
+    pip install -r requirements-dev.txt
+
+# Copy application
+COPY . .
+
+# Create directories
+RUN mkdir -p .war_bloop_v1/{payloads,scans,phishing_pages,captured_credentials,ssh_keys,traffic_logs,keylogs,keylog_screenshots,dos_logs,agents,c2_logs,modules,network_monitor,keylog_exfil,deployments,domain_hosting,cracking,docker_scans} && \
+    mkdir -p war_bloop_reports/{pdf_reports,graphics,charts}
+
+EXPOSE 5000 8080 8888
+
+CMD ["python3", "-m", "pytest", "tests/", "-v", "--cov=.", "--cov-report=html"]
