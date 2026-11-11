@@ -1,6 +1,13 @@
 # war-bloop-v1
 
+
+<div align="center">
+
+
+
 <img width="360" height="360" alt="bloop" src="https://github.com/user-attachments/assets/fd29793e-6442-424b-9359-a10e1d09789b" />
+
+</div>
 
 War Bloop is an advanced cybersecurity and penetration testing software developed by Accurate Cyber Defense, designed to provide cybersecurity professionals, ethical hackers, penetration testers, security researchers, military cybersecurity teams, financial institutions, and enterprise security departments with a powerful platform for managing security operations. War Bloop brings cybersecurity capabilities closer to users by enabling them to interact with security tools and execute authorized commands through multiple communication platforms, including Discord, Telegram, Slack, Google Chat, and a dedicated Web Application.
 
