@@ -132,7 +132,7 @@ Web Application: Use a dedicated browser-based interface for managing cybersecur
 
 This approach provides flexibility for cybersecurity teams working across different communication environments.
 
-10. Security, Authorization and Responsible Usage
+# 10. Security, Authorization and Responsible Usage
 
 War Bloop is intended for legitimate cybersecurity purposes, including authorized penetration testing, defensive security assessments, cybersecurity education, controlled simulations, and approved research.
 
@@ -157,6 +157,9 @@ Whether used by ethical hackers, penetration testers, red teams, blue teams, sec
 With support for Discord, Telegram, Slack, Google Chat, and a dedicated web application, War Bloop brings cybersecurity operations into a connected and accessible environment.
 
 War Bloop – Command Your Security. Strengthen Your Defense. Control Your Cybersecurity
+
+
+
 
 # How to clone the repo
 ```bash
