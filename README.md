@@ -166,6 +166,9 @@ Its deployment should incorporate appropriate authentication, role-based permiss
 
 Organizations should only conduct security assessments against infrastructure they own or have explicit authorization to test. Sensitive environments, particularly banking, government, and military infrastructure, require additional operational controls and formal approval.
 
+
+
+
 11. Developed by Accurate Cyber Defense
 
 War Bloop is part of the cybersecurity software ecosystem developed by Accurate Cyber Defense, a Malawian cybersecurity startup focused on developing innovative cybersecurity solutions.
@@ -185,8 +188,6 @@ With support for Discord, Telegram, Slack, Google Chat, and a dedicated web appl
 War Bloop – Command Your Security. Strengthen Your Defense. Control Your Cybersecurity
 
 
-
-
 # How to clone the repo
 ```bash
 git clone https://github.com/Iankulani/war-bloop-v1.git
@@ -195,4 +196,8 @@ cd war-bloop-v1
 
  # How to run
  ```bash
+```
+
+# Star History
+```bash
 ```
