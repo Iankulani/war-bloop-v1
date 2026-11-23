@@ -29,13 +29,13 @@
 
 War Bloop is an advanced cybersecurity and penetration testing software developed by Accurate Cyber Defense, designed to provide cybersecurity professionals, ethical hackers, penetration testers, security researchers, military cybersecurity teams, financial institutions, and enterprise security departments with a powerful platform for managing security operations. War Bloop brings cybersecurity capabilities closer to users by enabling them to interact with security tools and execute authorized commands through multiple communication platforms, including Discord, Telegram, Slack, Google Chat, and a dedicated Web Application.
 
-1. Advanced Multi-Platform Command Execution
+# 1. Advanced Multi-Platform Command Execution
 
 War Bloop introduces a multi-platform command execution environment that allows authorized users to interact with their cybersecurity infrastructure without relying exclusively on traditional terminal interfaces. Through its integrated communication channels, users can submit commands, receive execution results, monitor security operations, and manage supported cybersecurity functions.
 
 Whether accessing War Bloop through Discord, Telegram, Slack, Google Chat, or its web application, users can interact with a centralized cybersecurity environment designed to simplify security management and improve operational efficiency.
 
-2. Professional Penetration Testing
+# 2. Professional Penetration Testing
 
 War Bloop is designed to support authorized penetration testing engagements. Security professionals can use its capabilities to assess networks, identify security weaknesses, evaluate exposed services, and investigate potential vulnerabilities within approved testing environments.
 
@@ -61,7 +61,7 @@ Penetration testing documentation.
 
 Security assessment reporting.
 
-3. Advanced Cybersecurity Features
+# 3. Advanced Cybersecurity Features
 
 War Bloop is designed as a flexible cybersecurity environment that brings multiple security functions together. Its architecture can support modular integrations, allowing organizations to incorporate additional security capabilities as their operational requirements evolve.
 
@@ -69,7 +69,7 @@ Potential capabilities include security monitoring, vulnerability assessment, au
 
 The platform emphasizes controlled command execution, authentication, access management, and operational visibility.
 
-4. Banking and Financial Institutions
+# 4. Banking and Financial Institutions
 
 Financial institutions require reliable cybersecurity strategies to protect sensitive information, financial infrastructure, customer records, and digital banking services.
 
@@ -101,7 +101,7 @@ War Bloop is designed to support authorized cybersecurity exercises, defensive s
 
 Military cybersecurity professionals and government security departments can explore its capabilities within isolated, approved environments to evaluate infrastructure resilience, identify weaknesses, and strengthen defensive security strategies.
 
-6. Red Team and Blue Team Operations
+# 6. Red Team and Blue Team Operations
 
 War Bloop is suitable for cybersecurity professionals involved in different security disciplines.
 
@@ -125,21 +125,21 @@ War Bloop can also support cybersecurity training and simulation exercises.
 
 Organizations can establish controlled testing environments where security personnel practice identifying vulnerabilities, responding to simulated incidents, investigating suspicious activities, and documenting their findings.
 
-These exercises can help improve:
+# These exercises can help improve:
 
-Cybersecurity awareness.
+* Cybersecurity awareness.
 
-Incident response readiness.
+* Incident response readiness.
 
-Network security knowledge.
+* Network security knowledge.
 
-Security team coordination.
+* Security team coordination.
 
-Vulnerability management.
+* Vulnerability management.
 
-Defensive security capabilities.
+* Defensive security capabilities.
 
-9. Multi-Platform Accessibility
+# 9. Multi-Platform Accessibility
 
 One of War Bloop's defining characteristics is its ability to connect cybersecurity operations with familiar communication platforms.
 
@@ -198,6 +198,8 @@ cd war-bloop-v1
 ```
 
 # Star History
+
+![Star History](https://shieldcn.dev/chart/github/stars/Iankulani/war-bloop-v1.svg?theme=violet)
 
 
 ```
